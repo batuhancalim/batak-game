@@ -18,6 +18,11 @@ function initWebSocket() {
     let wsUrl = protocol + '//' + window.location.host;
     ws = new WebSocket(wsUrl);
     
+    ws.onopen = () => {
+        console.log("WebSocket açıldı!");
+        document.getElementById('login-error').innerText = "";
+    };
+    
     ws.onmessage = (event) => {
         let msg = JSON.parse(event.data);
         if (msg.type === 'STATE_UPDATE') {
@@ -35,13 +40,19 @@ function initWebSocket() {
             showGiftAnimation(msg.to, msg.sender, msg.gift);
         } else if (msg.type === 'ERROR') {
             isPlayingCard = false; // Unlock on error too
-            // Show subtle toast instead of alert
             showToast(msg.message);
         }
     };
     
     ws.onclose = () => {
-        document.getElementById('status-message').innerText = "Sunucu ile bağlantı kesildi!";
+        console.log("WebSocket kapandı!");
+        document.getElementById('status-message').innerText = "Bağlantı koptu! Yeniden bağlanılıyor...";
+        setTimeout(initWebSocket, 2000);
+    };
+
+    ws.onerror = (e) => {
+        console.error("WebSocket Hatası:", e);
+        document.getElementById('login-error').innerText = "Bağlantı kurulamadı. Render sunucusu uyanıyor olabilir, lütfen 30sn bekleyip tekrar deneyin.";
     };
 }
 

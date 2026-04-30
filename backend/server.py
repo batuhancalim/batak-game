@@ -126,8 +126,10 @@ async def process_request(connection, request):
 
 async def main():
     mimetypes.init()
-    ws_logger = __import__('logging').getLogger('websockets')
-    ws_logger.setLevel(__import__('logging').CRITICAL)  # Silence health-check noise
+    # Enable basic logging to see connections
+    import logging
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger('server')
     
     print(f"Sunucu port {PORT} üzerinde başlatılıyor (HTTP + WebSocket)...")
     
