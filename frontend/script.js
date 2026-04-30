@@ -325,8 +325,11 @@ function renderHand(uiPos, gamePos) {
     let playableSet = new Set();
     let isMyHand = (gamePos === gameState.my_position);
     let myPos = gameState.my_position;
+    // Revealed hand is the partner of the bidder (or bidder if human manager)
+    let partner_view = (myPos === gameState.highest_bidder || gameState.is_manager);
+    gameState.partner_view = partner_view;
     let partnerPos = (gameState.highest_bidder + 2) % 4;
-    let isPartnerHand = (gameState.highest_bidder === myPos && gamePos === partnerPos);
+    let isPartnerHand = (partner_view && gamePos === partnerPos);
     
     if ((isMyHand || isPartnerHand) && gameState.playable_indices) {
         gameState.playable_indices.forEach(i => playableSet.add(i));

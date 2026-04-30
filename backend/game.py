@@ -145,9 +145,14 @@ class GameEngine:
         # Validation: Is sender allowed to play for target_pos?
         is_owner = (pos == target_pos)
         partner_pos = (self.highest_bidder + 2) % 4
-        is_bidder_for_partner = (pos == self.highest_bidder and target_pos == partner_pos)
         
-        if not (is_owner or is_bidder_for_partner):
+        # Rule: If bidder is a bot and partner is a human, partner is the manager
+        is_human_manager = (self.is_bot[self.highest_bidder] and not self.is_bot[partner_pos] and pos == partner_pos)
+        
+        is_bidder_for_partner = (pos == self.highest_bidder and target_pos == partner_pos)
+        is_manager_for_bot_bidder = (is_human_manager and (target_pos == self.highest_bidder or target_pos == partner_pos))
+        
+        if not (is_owner or is_bidder_for_partner or is_manager_for_bot_bidder):
             return False, "Bu oyuncu adına kart oynayamazsınız!"
             
         if self.current_turn != target_pos:
@@ -330,9 +335,13 @@ class GameEngine:
 
         playable_indices = self.get_playable_card_indices(pos)
 
+        partner_pos = (self.highest_bidder + 2) % 4
+        is_manager = (self.is_bot[self.highest_bidder] and self.highest_bidder is not None and not self.is_bot[partner_pos] and pos == partner_pos)
+
         return {
             'state': self.state,
             'my_position': pos,
+            'is_manager': is_manager,
             'players': {p: data['name'] for s, data in self.players.items() for p in [data['position']]},
             'hands': visible_hands,
             'bids': self.bids,
@@ -352,12 +361,33 @@ class GameEngine:
     def get_bot_move(self, pos):
         if self.state == 'BIDDING':
             if pos == self.bidding_turn:
+                # Smart Bidding
+                hand = self.hands[pos]
+                power = 0
+                for c in hand:
+                    if c['value'] == 14: power += 3
+                    elif c['value'] == 13: power += 2
+                    elif c['value'] == 12: power += 1
+                
+                counts = {}
+                for c in hand: counts[c['suit']] = counts.get(c['suit'], 0) + 1
+                max_suit_count = max(counts.values()) if counts else 0
+                
+                # Eşli Batak min bid is 8.
+                estimated_bid = int(power / 1.8) + (max_suit_count - 3)
+                
+                if estimated_bid > self.current_bid and estimated_bid >= 8:
+                    return 'bid', min(estimated_bid, 11)
                 return 'bid', 0
             return None, None
             
         if self.state == 'WAITING_TRUMP':
             if pos == self.highest_bidder:
-                return 'set_trump', 'S' # Default Spades for bot
+                # Choose best suit
+                counts = {}
+                for c in self.hands[pos]: counts[c['suit']] = counts.get(c['suit'], 0) + 1
+                best_suit = max(counts, key=counts.get)
+                return 'set_trump', best_suit
             return None, None
             
         if self.state == 'PLAYING':
