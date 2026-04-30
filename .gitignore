@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.env
+tunnel_*.txt
+*.webp
+*.png
