@@ -116,32 +116,42 @@ async def websocket_handler(request):
 
     return ws
 
-async def bot_loop():
-    while True:
-        await asyncio.sleep(2.0)
-        bot_pos = None
-        if game.state == 'BIDDING':
-            bot_pos = game.bidding_turn
-        elif game.state == 'WAITING_TRUMP':
-            bot_pos = game.highest_bidder
-        elif game.state == 'PLAYING':
-            bot_pos = game.current_turn
-        
-        if bot_pos is not None and game.is_bot.get(bot_pos):
-            action, value = game.get_bot_move(bot_pos)
-            if action == 'bid':
-                game.handle_bid(bot_pos, value)
-                await broadcast_state()
-            elif action == 'set_trump':
-                game.set_trump(bot_pos, value)
-                await broadcast_state()
-            elif action == 'play_card':
-                # For bots, we assume they play for themselves
-                game.play_card(bot_pos, value, bot_pos)
-                if len(game.trick_cards) == 4:
-                    await asyncio.sleep(1.5) # Let people see the trick
-                    game.clear_trick()
-                await broadcast_state()
+async def bot_loop(app):
+    """Background task to handle bot turns."""
+    try:
+        while True:
+            await asyncio.sleep(2.0)
+            bot_pos = None
+            if game.state == 'BIDDING':
+                bot_pos = game.bidding_turn
+            elif game.state == 'WAITING_TRUMP':
+                bot_pos = game.highest_bidder
+            elif game.state == 'PLAYING':
+                bot_pos = game.current_turn
+            
+            if bot_pos is not None and game.is_bot.get(bot_pos):
+                action, value = game.get_bot_move(bot_pos)
+                if action == 'bid':
+                    game.handle_bid(bot_pos, value)
+                    await broadcast_state()
+                elif action == 'set_trump':
+                    game.set_trump(bot_pos, value)
+                    await broadcast_state()
+                elif action == 'play_card':
+                    game.play_card(bot_pos, value, bot_pos)
+                    if len(game.trick_cards) == 4:
+                        await asyncio.sleep(1.5)
+                        game.clear_trick()
+                    await broadcast_state()
+    except asyncio.CancelledError:
+        pass
+
+async def start_background_tasks(app):
+    app['bot_task'] = asyncio.create_task(bot_loop(app))
+
+async def cleanup_background_tasks(app):
+    app['bot_task'].cancel()
+    await app['bot_task']
 
 async def index_handler(request):
     return web.FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
@@ -151,6 +161,9 @@ async def health_check(request):
 
 def setup_app():
     app = web.Application()
+    app.on_startup.append(start_background_tasks)
+    app.on_cleanup.append(cleanup_background_tasks)
+    
     app.add_routes([
         web.get('/', index_handler),
         web.get('/ws', websocket_handler),
@@ -162,9 +175,4 @@ def setup_app():
 if __name__ == '__main__':
     app = setup_app()
     logger.info(f"Sunucu {PORT} portunda başlatılıyor...")
-    
-    # Start bot loop in background
-    loop = asyncio.get_event_loop()
-    loop.create_task(bot_loop())
-    
     web.run_app(app, host='0.0.0.0', port=PORT)
