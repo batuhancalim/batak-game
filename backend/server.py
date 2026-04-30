@@ -15,7 +15,7 @@ from game import GameEngine
 game = GameEngine()
 connected = set()
 FRONTEND_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")
-PORT = 8080
+PORT = int(os.environ.get("PORT", 8080))
 
 async def broadcast_state():
     for ws in list(connected):
