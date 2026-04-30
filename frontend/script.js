@@ -31,6 +31,8 @@ function initWebSocket() {
             } else {
                 document.getElementById('login-error').innerText = msg.message;
             }
+        } else if (msg.type === 'GIFT') {
+            showGiftAnimation(msg.to, msg.sender, msg.gift);
         } else if (msg.type === 'ERROR') {
             isPlayingCard = false; // Unlock on error too
             // Show subtle toast instead of alert
@@ -80,6 +82,30 @@ function playCard(index) {
 function clearTrick() { ws.send(JSON.stringify({action: 'clear_trick'})); }
 function nextRound() { ws.send(JSON.stringify({action: 'next_round'})); }
 function resetScores() { ws.send(JSON.stringify({action: 'reset_scores'})); }
+function sendGift(toPos, type) { ws.send(JSON.stringify({action: 'send_gift', to: toPos, gift: type})); }
+
+function showGiftAnimation(toPos, senderName, giftType) {
+    const giftMap = { 'tea': '☕', 'oralet': '🍵', 'banana': '🍌', 'cheers': '🥂' };
+    const giftNames = { 'tea': 'Çay', 'oralet': 'Oralet', 'banana': 'Muz', 'cheers': 'Kadeh' };
+    
+    // Find UI position for game position
+    let myPos = gameState.my_position;
+    let relPosNames = ['bottom', 'left', 'top', 'right'];
+    let uiPos = relPosNames[(toPos - myPos + 4) % 4];
+    
+    let container = document.getElementById('player-' + uiPos);
+    if (!container) return;
+    
+    // Create emoji element
+    let el = document.createElement('div');
+    el.className = 'gift-animation';
+    el.innerText = giftMap[giftType] || '🎁';
+    container.appendChild(el);
+    
+    showToast(`${senderName}, ikramat yaptı: ${giftNames[giftType] || giftType}!`);
+    
+    setTimeout(() => el.remove(), 2500);
+}
 
 function showToast(msg) {
     let toast = document.getElementById('toast-msg');
@@ -149,6 +175,16 @@ function renderAll() {
         }
 
         document.querySelector(`#player-${uiPos} .player-name`).innerText = pName + extraInfo;
+
+        // Update gift menu targets
+        let giftMenu = document.querySelector(`#player-${uiPos} .gift-menu`);
+        if (giftMenu) {
+            giftMenu.style.display = (pName !== "Boş" && pName !== "Bekleniyor...") ? "flex" : "none";
+            giftMenu.querySelectorAll('span').forEach(btn => {
+                let giftType = btn.getAttribute('data-type');
+                btn.onclick = () => sendGift(gamePos, giftType);
+            });
+        }
 
         renderHand(uiPos, gamePos);
         renderPlayedCard(uiPos, gamePos);

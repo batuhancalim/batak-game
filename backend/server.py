@@ -67,6 +67,21 @@ async def handler(websocket):
             elif action == 'reset_scores':
                 game.total_scores = {0: 0, 1: 0}
                 await broadcast_state()
+            elif action == 'send_gift':
+                to_pos = data.get('to')
+                gift_type = data.get('gift')
+                sender_name = game.players.get(id(websocket), {}).get('name', 'Biri')
+                # Broadcast the gift to everyone
+                for ws in list(connected):
+                    try:
+                        await ws.send(json.dumps({
+                            'type': 'GIFT',
+                            'to': to_pos,
+                            'sender': sender_name,
+                            'gift': gift_type
+                        }))
+                    except:
+                        pass
     except Exception:
         pass
     finally:
