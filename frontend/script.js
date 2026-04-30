@@ -190,7 +190,9 @@ function renderAll() {
         // Update gift menu targets
         let giftMenu = document.querySelector(`#player-${uiPos} .gift-menu`);
         if (giftMenu) {
-            giftMenu.style.display = (pName !== "Boş" && pName !== "Bekleniyor...") ? "flex" : "none";
+            // Hide gift menu for self
+            let isSelf = (gamePos === gameState.my_position);
+            giftMenu.style.display = (!isSelf && pName !== "Boş" && pName !== "Bekleniyor...") ? "flex" : "none";
             giftMenu.querySelectorAll('span').forEach(btn => {
                 let giftType = btn.getAttribute('data-type');
                 btn.onclick = () => sendGift(gamePos, giftType);
