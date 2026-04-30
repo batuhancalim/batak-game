@@ -60,10 +60,55 @@ body {
     text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
-.login-box p {
-    color: #a0b0b0;
-    margin-bottom: 30px;
+.login-box p { font-style: italic; color: #aaa; margin-bottom: 25px; }
+
+.seat-selection {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    margin: 20px 0;
+    width: 100%;
 }
+.seat-middle {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+}
+.seat {
+    background: rgba(255,255,255,0.05);
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+    min-width: 120px;
+    text-align: center;
+    transition: all 0.3s;
+}
+.seat.occupied {
+    border-color: #e0ca9a;
+    background: rgba(224, 202, 154, 0.1);
+}
+.seat span {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #e0ca9a;
+}
+.seat button {
+    background: #e0ca9a;
+    color: #1a3c31;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 700;
+    margin: 2px;
+}
+.seat .btn-bot {
+    background: #2a5c4d;
+    color: #fff;
+}
+.seat button:hover { opacity: 0.8; }
 
 input[type="text"] {
     width: 100%;

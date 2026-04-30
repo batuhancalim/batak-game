@@ -56,27 +56,38 @@ function initWebSocket() {
     };
 }
 
-function joinGame() {
+function joinGame(pos) {
     let name = document.getElementById('player-name').value;
-    if (!name) return;
+    if (!name) {
+        alert("Lütfen bir isim girin!");
+        return;
+    }
     playerName = name;
     
-    if (!ws || ws.readyState === WebSocket.CLOSED) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
         initWebSocket();
-    }
-    
-    if (ws.readyState === WebSocket.CONNECTING) {
         let checkInterval = setInterval(() => {
             if (ws.readyState === WebSocket.OPEN) {
                 clearInterval(checkInterval);
-                ws.send(JSON.stringify({action: 'join', name: name}));
-            } else if (ws.readyState === WebSocket.CLOSED) {
-                clearInterval(checkInterval);
-                alert("Bağlantı kurulamadı, sayfayı yenileyin.");
+                ws.send(JSON.stringify({action: 'join', name: name, position: pos}));
             }
         }, 100);
-    } else if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({action: 'join', name: name}));
+    } else {
+        ws.send(JSON.stringify({action: 'join', name: name, position: pos}));
+    }
+}
+
+function addBot(pos) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        initWebSocket();
+        let checkInterval = setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+                clearInterval(checkInterval);
+                ws.send(JSON.stringify({action: 'add_bot', position: pos}));
+            }
+        }, 100);
+    } else {
+        ws.send(JSON.stringify({action: 'add_bot', position: pos}));
     }
 }
 
@@ -139,6 +150,31 @@ function renderAll() {
     
     // Status text
     let statusText = "Bekleniyor...";
+    // Update Seat Selection Display in Lobby
+    if (gameState.state === 'LOBBY' || document.getElementById('login-screen').style.display !== 'none') {
+        let seats = document.querySelectorAll('.seat');
+        seats.forEach(seat => {
+            let pos = parseInt(seat.getAttribute('data-pos'));
+            let player = Object.values(gameState.players || {}).find(p => p.position === pos);
+            let btn = seat.querySelector('button:not(.btn-bot)');
+            let botBtn = seat.querySelector('.btn-bot');
+            let span = seat.querySelector('span');
+            
+            if (player) {
+                span.innerText = player.name;
+                btn.style.display = 'none';
+                botBtn.style.display = 'none';
+                seat.classList.add('occupied');
+            } else {
+                let posNames = ['Güney', 'Batı', 'Kuzey', 'Doğu'];
+                span.innerText = posNames[pos];
+                btn.style.display = 'inline-block';
+                botBtn.style.display = 'inline-block';
+                seat.classList.remove('occupied');
+            }
+        });
+    }
+
     if (gameState.state === 'LOBBY') {
         let count = Object.keys(gameState.players).length;
         statusText = `Oyuncular bekleniyor (${count}/4)...`;
@@ -147,6 +183,8 @@ function renderAll() {
         } else {
             document.getElementById('btn-start').style.display = 'none';
         }
+        document.getElementById('status-message').innerText = statusText;
+        return;
     } else {
         document.getElementById('btn-start').style.display = 'none';
         if (gameState.state === 'BIDDING') {

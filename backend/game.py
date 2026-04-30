@@ -14,8 +14,9 @@ class GameEngine:
         self.state = 'LOBBY' # LOBBY, DEALING, BIDDING, PLAYING, ROUND_END
         self.hands = {} # position -> [cards]
         self.scores = {0: 0, 1: 0} # Team 0 (0,2), Team 1 (1,3)
+        self.total_scores = {0: 0, 1: 0} # 0 & 2 vs 1 & 3
+        self.is_bot = {0: False, 1: False, 2: False, 3: False}
         self.reset_round()
-        self.total_scores = {0: 0, 1: 0}
         
     def reset_round(self):
         self.bids = {} # position -> bid_amount
@@ -33,21 +34,37 @@ class GameEngine:
         self.partner_cards_revealed = False
         self.cards_played_in_round = 0
         
-    def add_player(self, sid, name):
-        if self.state != 'LOBBY': return False, "Oyun şu an devam ediyor."
-        if len(self.players) >= 4: return False, "Masa dolu."
+    def add_player(self, player_id, name, requested_pos=None):
+        # Check if already in game
+        if player_id in self.players:
+            return False, "Zaten masadasınız!"
+
+        # Find position
+        pos = -1
+        if requested_pos is not None:
+            if requested_pos in [p['position'] for p in self.players.values()]:
+                return False, "Bu koltuk dolu!"
+            pos = requested_pos
+        else:
+            # Random/First empty (fallback)
+            occupied = [p['position'] for p in self.players.values()]
+            for i in range(4):
+                if i not in occupied:
+                    pos = i
+                    break
         
-        pos = 0
-        while self.positions[pos] is not None:
-            pos += 1
-            
-        self.players[sid] = {'name': name, 'position': pos}
-        self.positions[pos] = sid
+        if pos == -1:
+            return False, "Masa dolu!"
+
+        self.players[player_id] = {'name': name, 'position': pos, 'is_bot': False}
+        self.positions[pos] = player_id
+        return True, "Masaya oturuldu"
         
-        if len(self.players) == 4:
-            # Start game timer or directly start
-            pass
-        return True, "Katıldınız"
+    def get_state_for_player_lobby(self):
+        return {
+            "state": self.state,
+            "players": {pos: (self.players[sid]['name'] if sid else None) for pos, sid in enumerate(self.positions)}
+        }
         
     def remove_player(self, sid):
         if sid in self.players:
@@ -331,3 +348,60 @@ class GameEngine:
             'passed_players': list(self.passed_players),
             'playable_indices': playable_indices
         }
+
+    def get_bot_move(self, pos):
+        if self.state == 'BIDDING':
+            if pos == self.bidding_turn:
+                return 'bid', 0
+            return None, None
+            
+        if self.state == 'WAITING_TRUMP':
+            if pos == self.highest_bidder:
+                return 'set_trump', 'S' # Default Spades for bot
+            return None, None
+            
+        if self.state == 'PLAYING':
+            if pos != self.current_turn: return None, None
+            
+            playable = self.get_playable_card_indices(pos)
+            if not playable: return None, None
+            
+            hand = self.hands[pos]
+            
+            # AI Logic: Greedy but rule-abiding
+            if not self.trick_cards:
+                # Lead: Highest non-trump card
+                non_trumps = [i for i in playable if hand[i]['suit'] != self.trump_suit]
+                if non_trumps:
+                    choice = max(non_trumps, key=lambda i: hand[i]['value'])
+                else:
+                    choice = max(playable, key=lambda i: hand[i]['value'])
+                return 'play_card', choice
+            else:
+                # Following: Try to win with lowest possible winning card
+                led_suit = self.trick_cards[self.trick_leader]['suit']
+                highest_in_trick = self.get_highest_card_in_suit(self.trick_cards, led_suit)
+                
+                # Can we win with led suit?
+                can_win_led = [i for i in playable if hand[i]['suit'] == led_suit and hand[i]['value'] > highest_in_trick]
+                if can_win_led:
+                    choice = min(can_win_led, key=lambda i: hand[i]['value'])
+                    return 'play_card', choice
+                
+                # Can we win with trump?
+                if any(c['suit'] == self.trump_suit for c in self.trick_cards.values()):
+                    highest_trump = self.get_highest_card_in_suit(self.trick_cards, self.trump_suit)
+                    can_win_trump = [i for i in playable if hand[i]['suit'] == self.trump_suit and hand[i]['value'] > highest_trump]
+                    if can_win_trump:
+                        choice = min(can_win_trump, key=lambda i: hand[i]['value'])
+                        return 'play_card', choice
+                elif any(hand[i]['suit'] == self.trump_suit for i in playable):
+                    can_trump = [i for i in playable if hand[i]['suit'] == self.trump_suit]
+                    choice = min(can_trump, key=lambda i: hand[i]['value'])
+                    return 'play_card', choice
+                
+                # Just play lowest card
+                choice = min(playable, key=lambda i: hand[i]['value'])
+                return 'play_card', choice
+        
+        return None, None
