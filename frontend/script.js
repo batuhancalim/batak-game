@@ -15,7 +15,7 @@ function getCardDisplay(card) {
 
 function initWebSocket() {
     let protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    let wsUrl = protocol + '//' + window.location.host;
+    let wsUrl = protocol + '//' + window.location.host + '/ws';
     ws = new WebSocket(wsUrl);
     
     ws.onopen = () => {
