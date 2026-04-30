@@ -64,7 +64,7 @@ async def websocket_handler(request):
                     await broadcast_state()
                     
                 elif action == 'play_card':
-                    success, msg_err = game.play_card(pos, data.get('card_index'))
+                    success, msg_err = game.play_card(pos, data.get('card_index'), data.get('player_pos'))
                     if not success: await ws.send_json({'type': 'ERROR', 'message': msg_err})
                     await broadcast_state()
                     

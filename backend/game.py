@@ -120,29 +120,33 @@ class GameEngine:
         self.partner_cards_revealed = True  # Açmalı eşli - partner revealed!
         return True, ""
         
-    def play_card(self, pos, card_index):
+    def play_card(self, pos, card_index, target_pos=None):
         if self.state != 'PLAYING': return False, "Oyun şu an oynama aşamasında değil"
         
-        # In Açmalı Eşli, bidder plays for partner
-        actual_pos = pos
+        if target_pos is None: target_pos = pos
+        
+        # Validation: Is sender allowed to play for target_pos?
+        is_owner = (pos == target_pos)
         partner_pos = (self.highest_bidder + 2) % 4
-        if self.current_turn == partner_pos and pos == self.highest_bidder:
-            # Bidder is allowed to play partner's card
-            actual_pos = partner_pos
-        elif pos != self.current_turn:
-            return False, "Sıra sizde değil"
+        is_bidder_for_partner = (pos == self.highest_bidder and target_pos == partner_pos)
+        
+        if not (is_owner or is_bidder_for_partner):
+            return False, "Bu oyuncu adına kart oynayamazsınız!"
             
-        if card_index < 0 or card_index >= len(self.hands[actual_pos]):
+        if self.current_turn != target_pos:
+            return False, "Şu an bu oyuncunun sırası değil!"
+            
+        if card_index < 0 or card_index >= len(self.hands[target_pos]):
             return False, "Geçersiz kart"
             
-        card = self.hands[actual_pos][card_index]
+        card = self.hands[target_pos][card_index]
         
         # Validate move
-        if not self.is_valid_move(actual_pos, card):
+        if not self.is_valid_move(target_pos, card):
             return False, "Kurallara aykırı hamle (Renge uymalı veya koz atmalısınız)"
             
         # Play card
-        self.hands[actual_pos].pop(card_index)
+        self.hands[target_pos].pop(card_index)
         self.trick_cards[self.current_turn] = card
         
         # Check trick end

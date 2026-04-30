@@ -83,10 +83,10 @@ function joinGame() {
 function startGame() { ws.send(JSON.stringify({action: 'start'})); }
 function placeBid(amount) { ws.send(JSON.stringify({action: 'bid', amount: amount})); }
 function setTrump(suit) { ws.send(JSON.stringify({action: 'set_trump', suit: suit})); }
-function playCard(index) {
-    if (isPlayingCard) return; // Block double-click
+function playCard(index, pPos) {
+    if (isPlayingCard) return;
     isPlayingCard = true;
-    ws.send(JSON.stringify({action: 'play_card', card_index: index}));
+    ws.send(JSON.stringify({action: 'play_card', card_index: index, player_pos: pPos}));
     // Safety timeout - unlock after 2s if server doesn't respond
     setTimeout(() => { isPlayingCard = false; }, 2000);
 }
