@@ -27,8 +27,10 @@ async def broadcast_state():
             pass
 
 async def handler(websocket):
+    print(f"Yeni bağlantı isteği alındı. (ID: {id(websocket)})")
     connected.add(websocket)
     try:
+        print(f"Bağlantı başarılı: {id(websocket)}. Toplam bağlı: {len(connected)}")
         async for message in websocket:
             data = json.loads(message)
             action = data.get('action')
@@ -88,6 +90,7 @@ async def handler(websocket):
         if websocket in connected:
             connected.remove(websocket)
         game.remove_player(id(websocket))
+        print(f"Bağlantı kesildi: {id(websocket)}. Kalan bağlı: {len(connected)}")
         await broadcast_state()
 
 def serve_file(path):
@@ -115,10 +118,21 @@ async def process_request(connection, request):
     if upgrade == "websocket":
         return None  # Let websockets library handle it
     
-    # Serve static files for HTTP requests
+    # Handle Render/UptimeRobot health checks and HEAD requests
     path = request.path.split("?")[0]
+    if path == "/health":
+        return Response(200, "OK", Headers(), b"OK")
+        
+    # Support both GET and HEAD
+    if request.method not in ["GET", "HEAD"]:
+        return Response(405, "Method Not Allowed", Headers(), b"405 Method Not Allowed")
+
     try:
         status, extra_headers, body = serve_file(path)
+        # If HEAD request, don't send the body
+        if request.method == "HEAD":
+            body = b""
+            
         headers = Headers(list(extra_headers.items()))
         return Response(status, "OK" if status == 200 else "Error", headers, body)
     except Exception as e:
