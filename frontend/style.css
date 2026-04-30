@@ -139,9 +139,9 @@ input[type="text"]:focus {
 
 .scoreboard {
     position: absolute;
-    bottom: 20px;
-    left: 20px;
-    padding: 10px;
+    top: 10px;
+    left: 10px;
+    padding: 8px 12px;
     width: 170px;
     z-index: 100;
 }
@@ -246,7 +246,7 @@ input[type="text"]:focus {
 
 .top { top: 20px; left: 50%; transform: translateX(-50%); }
 .bottom { bottom: 20px; left: 50%; transform: translateX(-50%); }
-.left { left: 20px; top: 50%; transform: translateY(-50%); }
+.left { left: 20px; top: 60%; transform: translateY(-50%); }
 .right { right: 20px; top: 50%; transform: translateY(-50%); }
 
 .hand {
