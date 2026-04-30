@@ -1,7 +1,7 @@
 let ws;
 let gameState = null;
 let playerName = "";
-let isPlayingCard = false; // Lock to prevent double-click
+let isPlayingCard = false;
 
 const SUIT_SYMBOLS = { 'S': '♠', 'H': '♥', 'D': '♦', 'C': '♣' };
 const VALUE_NAMES = { 11: 'J', 12: 'Q', 13: 'K', 14: 'A' };
@@ -19,7 +19,7 @@ function initWebSocket() {
     ws = new WebSocket(wsUrl);
     
     ws.onopen = () => {
-        console.log("WebSocket açıldı!");
+        console.log("WebSocket connected");
         document.getElementById('login-error').innerText = "";
     };
     
@@ -27,68 +27,42 @@ function initWebSocket() {
         let msg = JSON.parse(event.data);
         if (msg.type === 'STATE_UPDATE') {
             gameState = msg.state;
-            isPlayingCard = false; // Unlock after server confirms
+            isPlayingCard = false;
             renderAll();
         } else if (msg.type === 'JOIN_RESULT') {
             if (msg.success) {
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('game-screen').style.display = 'block';
+                document.getElementById('login-error').innerText = "";
             } else {
                 document.getElementById('login-error').innerText = msg.message;
             }
         } else if (msg.type === 'GIFT') {
             showGiftAnimation(msg.to, msg.sender, msg.gift);
         } else if (msg.type === 'ERROR') {
-            isPlayingCard = false; // Unlock on error too
+            isPlayingCard = false;
             showToast(msg.message);
         }
-    };
-    
-    ws.onclose = () => {
-        console.log("WebSocket kapandı!");
-        document.getElementById('status-message').innerText = "Bağlantı koptu! Yeniden bağlanılıyor...";
-        setTimeout(initWebSocket, 2000);
-    };
-
-    ws.onerror = (e) => {
-        console.error("WebSocket Hatası:", e);
-        document.getElementById('login-error').innerText = "Bağlantı kurulamadı. Render sunucusu uyanıyor olabilir, lütfen 30sn bekleyip tekrar deneyin.";
     };
 }
 
 function joinGame(pos) {
     let name = document.getElementById('player-name').value;
-    if (!name) {
-        alert("Lütfen bir isim girin!");
-        return;
-    }
+    if (!name) { alert("Lütfen adınızı girin!"); return; }
     playerName = name;
-    
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-        initWebSocket();
-        let checkInterval = setInterval(() => {
-            if (ws.readyState === WebSocket.OPEN) {
-                clearInterval(checkInterval);
-                ws.send(JSON.stringify({action: 'join', name: name, position: pos}));
-            }
-        }, 100);
-    } else {
-        ws.send(JSON.stringify({action: 'join', name: name, position: pos}));
-    }
+    if (!ws || ws.readyState !== WebSocket.OPEN) initWebSocket();
+    setTimeout(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({action: 'join', name: name, position: pos}));
+        }
+    }, 500);
 }
 
 function addBot(pos) {
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-        initWebSocket();
-        let checkInterval = setInterval(() => {
-            if (ws.readyState === WebSocket.OPEN) {
-                clearInterval(checkInterval);
-                ws.send(JSON.stringify({action: 'add_bot', position: pos}));
-            }
-        }, 100);
-    } else {
-        ws.send(JSON.stringify({action: 'add_bot', position: pos}));
-    }
+    if (!ws || ws.readyState !== WebSocket.OPEN) initWebSocket();
+    setTimeout(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({action: 'add_bot', position: pos}));
+        }
+    }, 500);
 }
 
 function startGame() { ws.send(JSON.stringify({action: 'start'})); }
@@ -98,7 +72,6 @@ function playCard(index, pPos) {
     if (isPlayingCard) return;
     isPlayingCard = true;
     ws.send(JSON.stringify({action: 'play_card', card_index: index, player_pos: pPos}));
-    // Safety timeout - unlock after 2s if server doesn't respond
     setTimeout(() => { isPlayingCard = false; }, 2000);
 }
 function clearTrick() { ws.send(JSON.stringify({action: 'clear_trick'})); }
@@ -106,289 +79,150 @@ function nextRound() { ws.send(JSON.stringify({action: 'next_round'})); }
 function resetScores() { ws.send(JSON.stringify({action: 'reset_scores'})); }
 function sendGift(toPos, type) { ws.send(JSON.stringify({action: 'send_gift', to: toPos, gift: type})); }
 
-function showGiftAnimation(toPos, senderName, giftType) {
-    const giftMap = { 'tea': '☕', 'oralet': '🍵', 'banana': '🍌', 'cheers': '🥂' };
-    const giftNames = { 'tea': 'Çay', 'oralet': 'Oralet', 'banana': 'Muz', 'cheers': 'Kadeh' };
-    
-    // Find UI position for game position
-    let myPos = gameState.my_position;
-    let relPosNames = ['bottom', 'left', 'top', 'right'];
-    let uiPos = relPosNames[(toPos - myPos + 4) % 4];
-    
-    let container = document.getElementById('player-' + uiPos);
-    if (!container) return;
-    
-    // Create emoji element
-    let el = document.createElement('div');
-    el.className = 'gift-animation';
-    el.innerText = giftMap[giftType] || '🎁';
-    container.appendChild(el);
-    
-    showToast(`${senderName}, ikramat yaptı: ${giftNames[giftType] || giftType}!`);
-    
-    setTimeout(() => el.remove(), 2500);
-}
-
-function showToast(msg) {
-    let toast = document.getElementById('toast-msg');
-    if (!toast) {
-        toast = document.createElement('div');
-        toast.id = 'toast-msg';
-        toast.style.cssText = 'position:fixed;bottom:220px;left:50%;transform:translateX(-50%);background:rgba(200,50,50,0.9);color:white;padding:10px 20px;border-radius:20px;z-index:999;pointer-events:none;font-family:Outfit,sans-serif;transition:opacity 0.5s;';
-        document.body.appendChild(toast);
-    }
-    toast.innerText = msg;
-    toast.style.opacity = '1';
-    clearTimeout(toast._timeout);
-    toast._timeout = setTimeout(() => { toast.style.opacity = '0'; }, 2000);
-}
-
 function renderAll() {
     if (!gameState) return;
-    
+
     let myPos = gameState.my_position;
-    
-    // Status text
-    let statusText = "Bekleniyor...";
-    // Update Seat Selection Display in Lobby
-    if (gameState.state === 'LOBBY' || document.getElementById('login-screen').style.display !== 'none') {
-        let seats = document.querySelectorAll('.seat');
-        seats.forEach(seat => {
+
+    // Toggle Screen
+    if (myPos !== undefined && myPos !== null) {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('game-screen').style.display = 'flex';
+    } else {
+        document.getElementById('login-screen').style.display = 'flex';
+        document.getElementById('game-screen').style.display = 'none';
+        
+        // Lobby Seat Update
+        document.querySelectorAll('.seat').forEach(seat => {
             let pos = parseInt(seat.getAttribute('data-pos'));
-            let player = Object.values(gameState.players || {}).find(p => p.position === pos);
-            let btn = seat.querySelector('button:not(.btn-bot)');
-            let botBtn = seat.querySelector('.btn-bot');
+            let pName = gameState.players[pos];
+            let btns = seat.querySelector('.seat-btns');
             let span = seat.querySelector('span');
-            
-            if (player) {
-                span.innerText = player.name;
-                btn.style.display = 'none';
-                botBtn.style.display = 'none';
+            if (pName) {
+                span.innerText = pName;
+                if (btns) btns.style.display = 'none';
                 seat.classList.add('occupied');
             } else {
                 let posNames = ['Güney', 'Batı', 'Kuzey', 'Doğu'];
                 span.innerText = posNames[pos];
-                btn.style.display = 'inline-block';
-                botBtn.style.display = 'inline-block';
+                if (btns) btns.style.display = 'flex';
                 seat.classList.remove('occupied');
             }
         });
+        return;
     }
 
+    // Game UI Update
+    let statusText = "Bekleniyor...";
     if (gameState.state === 'LOBBY') {
         let count = Object.keys(gameState.players).length;
-        statusText = `Oyuncular bekleniyor (${count}/4)...`;
-        if (count === 4 && myPos === 0) {
-            document.getElementById('btn-start').style.display = 'block';
-        } else {
-            document.getElementById('btn-start').style.display = 'none';
-        }
-        document.getElementById('status-message').innerText = statusText;
-        return;
+        statusText = `Bekleniyor (${count}/4)...`;
+        document.getElementById('btn-start').style.display = (count === 4 && myPos === 0) ? 'block' : 'none';
     } else {
         document.getElementById('btn-start').style.display = 'none';
         if (gameState.state === 'BIDDING') {
-            statusText = `İhale aşaması. Sıra: ${gameState.players[gameState.bidding_turn]}`;
-        } else if (gameState.state === 'WAITING_TRUMP') {
-            statusText = `İhale ${gameState.highest_bidder === myPos ? 'sizde' : gameState.players[gameState.highest_bidder] + ' onda'}. Koz bekleniyor...`;
+            statusText = `İhale: ${gameState.players[gameState.bidding_turn]}`;
         } else if (gameState.state === 'PLAYING') {
             statusText = `Sıra: ${gameState.players[gameState.current_turn]}`;
-        } else if (gameState.state === 'ROUND_END') {
-            statusText = "Tur bitti!";
         }
     }
     document.getElementById('status-message').innerText = statusText;
 
-    // Relative Positions: bottom=myPos, left=(myPos+1)%4, top=(myPos+2)%4, right=(myPos+3)%4
-    let relPos = {
-        'bottom': myPos,
-        'left': (myPos + 1) % 4,
-        'top': (myPos + 2) % 4,
-        'right': (myPos + 3) % 4
-    };
-
-    // Render players & hands
-    for (const [uiPos, gamePos] of Object.entries(relPos)) {
-        let pName = gameState.players[gamePos] || "Boş";
+    let relPos = { 'bottom': myPos, 'left': (myPos+1)%4, 'top': (myPos+2)%4, 'right': (myPos+3)%4 };
+    for (const [ui, gp] of Object.entries(relPos)) {
+        let pName = gameState.players[gp] || "Boş";
+        let info = document.querySelector(`#player-${ui} .player-name`);
+        if (info) info.innerText = pName;
         
-        let extraInfo = "";
-        if (gameState.bids && gamePos in gameState.bids) extraInfo = ` (İhale: ${gameState.bids[gamePos]})`;
-        if (gameState.highest_bidder === gamePos) extraInfo = ` (İhaleyi Aldı: ${gameState.current_bid})`;
-        
-        // Mark active
-        let el = document.getElementById('player-' + uiPos);
-        if (el) {
-            el.className = 'player-area ' + uiPos;
-            if (gameState.state === 'BIDDING' && gameState.bidding_turn === gamePos) el.classList.add('active');
-            if (gameState.state === 'PLAYING' && gameState.current_turn === gamePos) el.classList.add('active');
+        let botBtn = document.querySelector(`#player-${ui} .add-bot-table-btn`);
+        if (botBtn) {
+            botBtn.style.display = (pName === "Boş") ? 'block' : 'none';
+            botBtn.onclick = () => addBot(gp);
         }
-
-        document.querySelector(`#player-${uiPos} .player-name`).innerText = pName + extraInfo;
-
-        // Update gift menu targets
-        let giftMenu = document.querySelector(`#player-${uiPos} .gift-menu`);
-        if (giftMenu) {
-            // Hide gift menu for self
-            let isSelf = (gamePos === gameState.my_position);
-            giftMenu.style.display = (!isSelf && pName !== "Boş" && pName !== "Bekleniyor...") ? "flex" : "none";
-            giftMenu.querySelectorAll('span').forEach(btn => {
-                let giftType = btn.getAttribute('data-type');
-                btn.onclick = () => sendGift(gamePos, giftType);
-            });
-        }
-
-        renderHand(uiPos, gamePos);
-        renderPlayedCard(uiPos, gamePos);
+        renderHand(ui, gp);
+        renderPlayedCard(ui, gp);
     }
 
-    // Modal logic
-    document.getElementById('bidding-modal').style.display = 
-        (gameState.state === 'BIDDING' && gameState.bidding_turn === myPos) ? 'flex' : 'none';
-        
-    if (gameState.state === 'BIDDING' && gameState.bidding_turn === myPos) {
-        let bidContainer = document.getElementById('bid-numbers');
-        bidContainer.innerHTML = '';
-        let startBid = Math.max(8, gameState.current_bid + 1);
-        for(let i=startBid; i<=13; i++) {
-            let b = document.createElement('button');
-            b.className = 'btn-primary';
-            b.innerText = i;
-            b.onclick = () => placeBid(i);
-            bidContainer.appendChild(b);
-        }
-    }
-
-    document.getElementById('trump-modal').style.display = 
-        (gameState.state === 'WAITING_TRUMP' && gameState.highest_bidder === myPos) ? 'flex' : 'none';
-
-    // Buttons
-    let isTrickFull = Object.keys(gameState.trick_cards || {}).length === 4;
-    document.getElementById('btn-next-trick').style.display = 
-        (isTrickFull && gameState.trick_leader === myPos) ? 'block' : 'none';
-
-    if (isTrickFull && gameState.trick_leader === myPos) {
-        if (!window.trickClearTimeout) {
-            window.trickClearTimeout = setTimeout(() => {
-                clearTrick();
-                window.trickClearTimeout = null;
-            }, 2500);
-        }
-    } else {
-        if (window.trickClearTimeout) {
-            clearTimeout(window.trickClearTimeout);
-            window.trickClearTimeout = null;
-        }
-    }
-
-    document.getElementById('btn-next-round').style.display = 
-        (gameState.state === 'ROUND_END' && myPos === 0) ? 'block' : 'none';
-
-    // Top scoreboard with player names
-    let myTeamName = [gameState.players[myPos], gameState.players[(myPos+2)%4]].filter(Boolean).join(' & ');
-    let theirTeamName = [gameState.players[(myPos+1)%4], gameState.players[(myPos+3)%4]].filter(Boolean).join(' & ');
-    document.getElementById('score-us-label').innerText = (myTeamName || 'Biz') + ':';
-    document.getElementById('score-them-label').innerText = (theirTeamName || 'Onlar') + ':';
-    document.getElementById('score-us').innerText = gameState.total_scores[myPos % 2];
-    document.getElementById('score-them').innerText = gameState.total_scores[(myPos + 1) % 2];
-
-    // Tricks won this round
-    let myTricks = (gameState.tricks_won[myPos] || 0) + (gameState.tricks_won[(myPos+2)%4] || 0);
-    let theirTricks = (gameState.tricks_won[(myPos+1)%4] || 0) + (gameState.tricks_won[(myPos+3)%4] || 0);
-    let tricksEl = document.getElementById('tricks-info');
-    if (tricksEl && gameState.state === 'PLAYING' || gameState.state === 'ROUND_END') {
-        let bid = gameState.current_bid;
-        let bidder = gameState.highest_bidder;
-        let bidderTeam = (bidder !== null && bidder !== undefined) ? (bidder % 2 === myPos % 2 ? 'bizim' : 'onların') : '';
-        tricksEl.innerText = `Bu turda: Biz ${myTricks} - Onlar ${theirTricks} el aldı${bid ? ` (İhale: ${bid} ${bidderTeam} takımda)` : ''}`;
-    } else if (tricksEl) {
-        tricksEl.innerText = '';
-    }
+    // Score
+    document.getElementById('score-us').innerText = gameState.total_scores[myPos%2];
+    document.getElementById('score-them').innerText = gameState.total_scores[(myPos+1)%2];
     
-    if (gameState.trump_suit) {
-        document.getElementById('trump-indicator').innerText = "Koz: " + SUIT_SYMBOLS[gameState.trump_suit];
-        document.getElementById('trump-indicator').className = 
-            "trump-indicator " + ((gameState.trump_suit === 'H'||gameState.trump_suit === 'D') ? 'red' : 'black');
-    } else {
-        document.getElementById('trump-indicator').innerText = "";
+    // Modals
+    document.getElementById('bidding-modal').style.display = (gameState.state === 'BIDDING' && gameState.bidding_turn === myPos) ? 'flex' : 'none';
+    if (gameState.state === 'BIDDING' && gameState.bidding_turn === myPos) {
+        let container = document.getElementById('bid-numbers');
+        container.innerHTML = '';
+        for (let i = Math.max(8, gameState.current_bid+1); i <= 13; i++) {
+            let b = document.createElement('button'); b.innerText = i; b.className='btn-primary'; b.onclick = () => placeBid(i);
+            container.appendChild(b);
+        }
     }
+    document.getElementById('trump-modal').style.display = (gameState.state === 'WAITING_TRUMP' && gameState.highest_bidder === myPos) ? 'flex' : 'none';
+    
+    // Next Trick Button
+    let isFull = Object.keys(gameState.trick_cards || {}).length === 4;
+    document.getElementById('btn-next-trick').style.display = (isFull && gameState.trick_leader === myPos) ? 'block' : 'none';
+    document.getElementById('btn-next-round').style.display = (gameState.state === 'ROUND_END' && myPos === 0) ? 'block' : 'none';
 }
 
-function renderHand(uiPos, gamePos) {
-    let handContainer = document.getElementById('hand-' + uiPos);
-    handContainer.innerHTML = '';
-    
-    let cards = gameState.hands[gamePos] || [];
-    
-    // Use server-provided playable indices
-    // playable_indices is only set for the cards this player CAN play
-    // (own cards or partner's when bidder)
-    let playableSet = new Set();
-    let isMyHand = (gamePos === gameState.my_position);
+function renderHand(ui, gp) {
+    let container = document.getElementById('hand-' + ui);
+    container.innerHTML = '';
+    let cards = gameState.hands[gp] || [];
     let myPos = gameState.my_position;
-    // Revealed hand is the partner of the bidder (or bidder if human manager)
-    let partner_view = (myPos === gameState.highest_bidder || gameState.is_manager);
-    gameState.partner_view = partner_view;
     let partnerPos = (gameState.highest_bidder + 2) % 4;
-    let isPartnerHand = (partner_view && gamePos === partnerPos);
-    
-    if ((isMyHand || isPartnerHand) && gameState.playable_indices) {
-        gameState.playable_indices.forEach(i => playableSet.add(i));
-    }
-    
-    let isMyTurn = (gameState.state === 'PLAYING' && gameState.playable_indices && gameState.playable_indices.length > 0);
+    let partnerView = (myPos === gameState.highest_bidder || gameState.is_manager);
+    let playableSet = new Set(gameState.playable_indices || []);
 
-    cards.forEach((card, index) => {
+    cards.forEach((card, i) => {
         let div = document.createElement('div');
-        
         if (card.suit === '?') {
-            div.className = 'card hidden';
+            div.className = 'card card-back';
         } else {
-            let display = getCardDisplay(card);
-            let isPlayable = (isMyHand || isPartnerHand) && playableSet.has(index);
-            let isInvalid = (isMyHand || isPartnerHand) && isMyTurn && !playableSet.has(index);
-            
-            let extraClass = isPlayable ? 'playable' : (isInvalid ? 'unplayable' : '');
-            div.className = `card ${display.colorClass} ${extraClass}`;
-            div.innerHTML = `
-                <div class="card-top-left">
-                    <div class="value">${display.valStr}</div>
-                    <div class="suit">${display.suitStr}</div>
-                </div>
-                <div class="center-suit">${display.suitStr}</div>
-                <div class="card-bottom-right">
-                    <div class="value">${display.valStr}</div>
-                    <div class="suit">${display.suitStr}</div>
-                </div>
-            `;
-            if (isPlayable) {
-                div.onclick = () => playCard(index);
-            }
+            let d = getCardDisplay(card);
+            let p_pos = (partnerView && gp === partnerPos);
+            let isPlayable = (gp === myPos || p_pos) && playableSet.has(i);
+            div.className = `card ${d.colorClass} ${isPlayable ? 'playable' : ''}`;
+            div.innerHTML = `<div class="card-top-left">${d.valStr}<br>${d.suitStr}</div><div class="center-suit">${d.suitStr}</div>`;
+            if (isPlayable) div.onclick = () => playCard(i, gp);
         }
-        handContainer.appendChild(div);
+        container.appendChild(div);
     });
 }
 
-function renderPlayedCard(uiPos, gamePos) {
-    let container = document.getElementById('played-' + uiPos);
-    container.innerHTML = '';
-    
-    if (gameState.trick_cards && gameState.trick_cards[gamePos]) {
-        let card = gameState.trick_cards[gamePos];
-        let display = getCardDisplay(card);
+function renderPlayedCard(ui, gp) {
+    let c = document.getElementById('played-' + ui);
+    c.innerHTML = '';
+    if (gameState.trick_cards && gameState.trick_cards[gp]) {
+        let d = getCardDisplay(gameState.trick_cards[gp]);
         let div = document.createElement('div');
-        div.className = `card ${display.colorClass}`;
-        div.innerHTML = `
-            <div class="card-top-left">
-                <div class="value">${display.valStr}</div>
-                <div class="suit">${display.suitStr}</div>
-            </div>
-            <div class="center-suit">${display.suitStr}</div>
-            <div class="card-bottom-right">
-                <div class="value">${display.valStr}</div>
-                <div class="suit">${display.suitStr}</div>
-            </div>
-        `;
-        container.appendChild(div);
+        div.className = `card ${d.colorClass}`;
+        div.innerHTML = `<div class="card-top-left">${d.valStr}<br>${d.suitStr}</div><div class="center-suit">${d.suitStr}</div>`;
+        c.appendChild(div);
     }
 }
 
+function showGiftAnimation(to, sender, type) {
+    const map = { 'tea': '☕', 'oralet': '🍵', 'banana': '🍌', 'cheers': '🥂' };
+    let myPos = gameState.my_position;
+    let uiPos = ['bottom', 'left', 'top', 'right'][(to - myPos + 4) % 4];
+    let container = document.getElementById('player-' + uiPos);
+    if (!container) return;
+    let el = document.createElement('div');
+    el.className = 'gift-animation';
+    el.innerText = map[type] || '🎁';
+    container.appendChild(el);
+    setTimeout(() => el.remove(), 2500);
+}
+
+function showToast(msg) {
+    let t = document.getElementById('status-message');
+    if (t) t.innerText = msg;
+}
+
+initWebSocket();
+setInterval(() => {
+    if (ws && ws.readyState === WebSocket.OPEN && !gameState) {
+        ws.send(JSON.stringify({action: 'get_state'}));
+    }
+}, 2000);
