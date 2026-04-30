@@ -25,7 +25,12 @@ function initWebSocket(callback) {
             isPlayingCard = false;
             renderAll();
         } else if (msg.type === 'JOIN_RESULT') {
-            if (!msg.success) document.getElementById('login-error').innerText = msg.message;
+            if (msg.success) {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('game-screen').style.display = 'flex';
+            } else {
+                document.getElementById('login-error').innerText = msg.message;
+            }
         } else if (msg.type === 'GIFT') {
             showGiftAnimation(msg.to, msg.sender, msg.gift);
         } else if (msg.type === 'ERROR') {
@@ -68,16 +73,19 @@ function renderAll() {
     if (!gameState) return;
     let myPos = gameState.my_position;
 
+    // Direct screen switch based on being in game
     if (myPos !== undefined && myPos !== null) {
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('game-screen').style.display = 'flex';
+        if (document.getElementById('login-screen').style.display !== 'none') {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'flex';
+        }
     } else {
         document.getElementById('login-screen').style.display = 'flex';
         document.getElementById('game-screen').style.display = 'none';
         return;
     }
 
-    // Status
+    // Status message
     let statusText = "Bekleniyor...";
     if (gameState.state === 'LOBBY') {
         let count = Object.keys(gameState.players).length;
@@ -88,6 +96,7 @@ function renderAll() {
         if (gameState.state === 'BIDDING') statusText = `İhale: ${gameState.players[gameState.bidding_turn]}`;
         else if (gameState.state === 'PLAYING') statusText = `Sıra: ${gameState.players[gameState.current_turn]}`;
         else if (gameState.state === 'ROUND_END') statusText = "Tur Bitti!";
+        else if (gameState.state === 'WAITING_TRUMP') statusText = "Koz seçiliyor...";
     }
     document.getElementById('status-message').innerText = statusText;
 
@@ -97,7 +106,7 @@ function renderAll() {
         let area = document.getElementById('player-' + ui);
         if (!area) continue;
         
-        area.querySelector('.player-name').innerText = pName;
+        area.querySelector('.player-name').innerText = (gp === myPos ? "Sen" : pName);
         let botBtn = area.querySelector('.btn-add-bot');
         if (botBtn) botBtn.style.display = (pName === "Boş") ? 'block' : 'none';
         
@@ -111,9 +120,10 @@ function renderAll() {
         renderPlayedCard(ui, gp);
     }
 
-    // Modals & Scores
-    document.getElementById('score-us').innerText = gameState.total_scores[myPos%2];
-    document.getElementById('score-them').innerText = gameState.total_scores[(myPos+1)%2];
+    // Modal & Triggers
+    document.getElementById('score-us').innerText = gameState.total_scores[myPos%2] || 0;
+    document.getElementById('score-them').innerText = gameState.total_scores[(myPos+1)%2] || 0;
+    
     document.getElementById('bidding-modal').style.display = (gameState.state === 'BIDDING' && gameState.bidding_turn === myPos) ? 'flex' : 'none';
     if (gameState.state === 'BIDDING' && gameState.bidding_turn === myPos) {
         let c = document.getElementById('bid-numbers'); c.innerHTML = '';
@@ -123,6 +133,7 @@ function renderAll() {
         }
     }
     document.getElementById('trump-modal').style.display = (gameState.state === 'WAITING_TRUMP' && gameState.highest_bidder === myPos) ? 'flex' : 'none';
+    
     let isFull = Object.keys(gameState.trick_cards || {}).length === 4;
     document.getElementById('btn-next-trick').style.display = (isFull && gameState.trick_leader === myPos) ? 'block' : 'none';
     document.getElementById('btn-next-round').style.display = (gameState.state === 'ROUND_END' && myPos === 0) ? 'block' : 'none';
@@ -132,8 +143,8 @@ function renderHand(ui, gp) {
     let c = document.getElementById('hand-' + ui); c.innerHTML = '';
     let cards = gameState.hands[gp] || [];
     let myPos = gameState.my_position;
-    let isManager = gameState.is_manager;
     let partnerPos = (gameState.highest_bidder + 2) % 4;
+    let partnerView = (myPos === gameState.highest_bidder || gameState.is_manager);
     let playable = new Set(gameState.playable_indices || []);
 
     cards.forEach((card, i) => {
@@ -141,12 +152,8 @@ function renderHand(ui, gp) {
         if (card.suit === '?') div.className = 'card card-back';
         else {
             let d = getCardDisplay(card);
-            let isP = (gp === myPos || (isManager && gp === (gameState.highest_bidder === myPos ? partnerPos : gameState.highest_bidder))) && playable.has(i);
-            // Wait, is_manager logic: if bidder is bot and me is partner
-            let partnerView = (myPos === gameState.highest_bidder || isManager);
             let p_pos = (partnerView && gp === partnerPos);
             let canClick = (gp === myPos || p_pos) && playable.has(i);
-            
             div.className = `card ${d.colorClass} ${canClick ? 'playable' : ''}`;
             div.innerHTML = `<div class="card-top-left">${d.valStr}<br>${d.suitStr}</div><div class="center-suit">${d.suitStr}</div>`;
             if (canClick) div.onclick = () => playCard(i, gp);
@@ -170,9 +177,10 @@ function showGiftAnimation(to, sender, type) {
     const map = { 'tea': '☕', 'oralet': '🍵', 'banana': '🍌', 'cheers': '🥂' };
     let uiPos = ['bottom', 'left', 'top', 'right'][(to - gameState.my_position + 4) % 4];
     let area = document.getElementById('player-' + uiPos);
-    if (!area) return;
-    let el = document.createElement('div'); el.className = 'gift-animation'; el.innerText = map[type];
-    area.appendChild(el); setTimeout(() => el.remove(), 2500);
+    if (area) {
+        let el = document.createElement('div'); el.className = 'gift-animation'; el.innerText = map[type];
+        area.appendChild(el); setTimeout(() => el.remove(), 2500);
+    }
 }
 
 initWebSocket(() => { setInterval(() => { if (!gameState) ws.send(JSON.stringify({action: 'get_state'})); }, 2000); });
