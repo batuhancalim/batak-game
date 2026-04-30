@@ -5,111 +5,103 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Eşli Batak (Açmalı)</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Playfair+Display:ital,wght@1,700&display=swap" rel="stylesheet">
 </head>
 <body>
 
-    <div id="login-screen" class="screen" style="display: flex;">
+    <div id="login-screen" class="screen">
         <div class="login-box glass">
             <h1>AÇMALI EŞLİ BATAK</h1>
-            <p>Koltuk seçin ve oyunu başlatın</p>
+            <p>Hızlıca masaya otur ve oyunu yönet</p>
             <input type="text" id="player-name" placeholder="Adınızı girin" autocomplete="off" />
-            
-            <div class="seat-selection">
-                <div class="seat" data-pos="2"><span>Kuzey</span><div class="seat-btns"><button onclick="joinGame(2)">Otur</button><button class="btn-bot" onclick="addBot(2)">+Bot</button></div></div>
-                <div class="seat-middle">
-                    <div class="seat" data-pos="1"><span>Batı</span><div class="seat-btns"><button onclick="joinGame(1)">Otur</button><button class="btn-bot" onclick="addBot(1)">+Bot</button></div></div>
-                    <div class="seat" data-pos="3"><span>Doğu</span><div class="seat-btns"><button onclick="joinGame(3)">Otur</button><button class="btn-bot" onclick="addBot(3)">+Bot</button></div></div>
-                </div>
-                <div class="seat" data-pos="0"><span>Güney</span><div class="seat-btns"><button onclick="joinGame(0)">Otur</button><button class="btn-bot" onclick="addBot(0)">+Bot</button></div></div>
-            </div>
-
-            <div id="login-error" class="error-msg"></div>
+            <button onclick="joinGame()" class="btn-primary" style="width: 100%;">Masaya Gir</button>
+            <div id="login-error" class="error-msg" style="color: #ff7675; margin-top: 10px;"></div>
         </div>
     </div>
 
     <div id="game-screen" class="screen" style="display: none;">
         <div class="table-container">
-            <!-- Puan Tablosu -->
+            <!-- Skor Tablosu -->
             <div class="scoreboard glass-panel">
                 <h3>Skor</h3>
                 <div class="score-row"><span id="score-us-label">Biz:</span> <span id="score-us">0</span></div>
                 <div class="score-row"><span id="score-them-label">Onlar:</span> <span id="score-them">0</span></div>
                 <div id="tricks-info" class="tricks-info"></div>
                 <div class="trump-indicator" id="trump-indicator"></div>
-                <button class="btn-reset" onclick="resetScores()" title="Skorları Sıfırla">↺ Sıfırla</button>
+                <button class="btn-reset" onclick="resetScores()">↺ Sıfırla</button>
             </div>
 
-            <!-- Oyuncular ve Masadaki Alanlar -->
+            <!-- Masa ve Oyuncular -->
             <div class="player-area top" id="player-top">
                 <div class="player-info-box">
-                    <div class="player-name">Bekleniyor...</div>
-                    <div class="gift-menu">
+                    <div class="player-name">Boş</div>
+                    <div class="gift-menu shadow" style="display: none;">
                         <span data-type="tea" title="Çay">☕</span>
                         <span data-type="oralet" title="Oralet">🍵</span>
                         <span data-type="banana" title="Muz">🍌</span>
                         <span data-type="cheers" title="Şerefe">🥂</span>
                     </div>
+                    <button class="btn-add-bot" onclick="addBotAt(2)">+ Bot Ekle</button>
                 </div>
-                <button class="add-bot-table-btn" style="display:none;">+ Bot Ekle</button>
                 <div class="hand" id="hand-top"></div>
             </div>
 
             <div class="player-area left" id="player-left">
                 <div class="player-info-box">
-                    <div class="player-name">Bekleniyor...</div>
-                    <div class="gift-menu">
+                    <div class="player-name">Boş</div>
+                    <div class="gift-menu shadow" style="display: none;">
                         <span data-type="tea" title="Çay">☕</span>
                         <span data-type="oralet" title="Oralet">🍵</span>
                         <span data-type="banana" title="Muz">🍌</span>
                         <span data-type="cheers" title="Şerefe">🥂</span>
                     </div>
+                    <button class="btn-add-bot" onclick="addBotAt(1)">+ Bot Ekle</button>
                 </div>
-                <button class="add-bot-table-btn" style="display:none;">+ Bot Ekle</button>
                 <div class="hand vertical-hand" id="hand-left"></div>
             </div>
 
             <div class="player-area right" id="player-right">
                 <div class="player-info-box">
-                    <div class="player-name">Bekleniyor...</div>
-                    <div class="gift-menu">
+                    <div class="player-name">Boş</div>
+                    <div class="gift-menu shadow" style="display: none;">
                         <span data-type="tea" title="Çay">☕</span>
                         <span data-type="oralet" title="Oralet">🍵</span>
                         <span data-type="banana" title="Muz">🍌</span>
                         <span data-type="cheers" title="Şerefe">🥂</span>
                     </div>
+                    <button class="btn-add-bot" onclick="addBotAt(3)">+ Bot Ekle</button>
                 </div>
-                <button class="add-bot-table-btn" style="display:none;">+ Bot Ekle</button>
                 <div class="hand vertical-hand" id="hand-right"></div>
             </div>
 
             <div class="player-area bottom" id="player-bottom">
                 <div class="player-info-box">
                     <div class="player-name">Sen</div>
-                    <div class="gift-menu">
+                    <div class="gift-menu shadow" style="display: none;">
                         <span data-type="tea" title="Çay">☕</span>
                         <span data-type="oralet" title="Oralet">🍵</span>
                         <span data-type="banana" title="Muz">🍌</span>
                         <span data-type="cheers" title="Şerefe">🥂</span>
                     </div>
+                    <button class="btn-add-bot" onclick="addBotAt(0)" style="display: none;">+ Bot Ekle</button>
                 </div>
                 <div class="hand" id="hand-bottom"></div>
             </div>
 
-            <!-- Masanın Ortası (Oynanan Kartlar) -->
+            <!-- Ortadaki Karar Alanı -->
             <div class="table-center">
                 <div class="played-card pos-top" id="played-top"></div>
                 <div class="played-card pos-left" id="played-left"></div>
                 <div class="played-card pos-right" id="played-right"></div>
                 <div class="played-card pos-bottom" id="played-bottom"></div>
                 
-                <button id="btn-start" class="btn-primary" style="display: none;" onclick="startGame()">Oyunu Başlat</button>
-                <button id="btn-next-trick" class="btn-primary" style="display: none;" onclick="clearTrick()">Sonraki El</button>
-                <button id="btn-next-round" class="btn-primary" style="display: none;" onclick="nextRound()">Sonraki Tur</button>
+                <div class="center-controls">
+                    <button id="btn-start" class="btn-primary" style="display: none;" onclick="startGame()">OYUNU BAŞLAT</button>
+                    <button id="btn-next-trick" class="btn-primary" style="display: none;" onclick="clearTrick()">Sonraki El</button>
+                    <button id="btn-next-round" class="btn-primary" style="display: none;" onclick="nextRound()">Sonraki Tur</button>
+                </div>
             </div>
-            
-            <!-- Durum ve Bildirimler -->
+
             <div id="status-message" class="status-msg"></div>
         </div>
 
@@ -117,7 +109,7 @@
         <div id="bidding-modal" class="modal" style="display: none;">
             <div class="modal-content glass">
                 <h2>İhale</h2>
-                <div id="bid-status" style="margin-bottom: 20px;"></div>
+                <div id="bid-status" style="margin-bottom: 20px;">Sıra sizde, ihaleyi belirleyin.</div>
                 <div class="bid-buttons">
                     <button class="btn-secondary" onclick="placeBid(0)">Pas</button>
                     <div id="bid-numbers" style="display: inline-block;"></div>
@@ -125,11 +117,10 @@
             </div>
         </div>
 
-        <!-- Koz Seçme Modalı -->
+        <!-- Koz Modalı -->
         <div id="trump-modal" class="modal" style="display: none;">
             <div class="modal-content glass">
                 <h2>Koz Seçimi</h2>
-                <p>İhaleyi aldınız! Lütfen kozu belirleyin:</p>
                 <div class="suit-selector">
                     <button onclick="setTrump('S')" class="suit-btn black">♠</button>
                     <button onclick="setTrump('H')" class="suit-btn red">♥</button>
@@ -138,7 +129,6 @@
                 </div>
             </div>
         </div>
-
     </div>
 
     <script src="script.js"></script>
