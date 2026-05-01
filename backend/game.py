@@ -320,8 +320,8 @@ class GameEngine:
         return [i for i, card in enumerate(hand) if self.is_valid_move(actual_pos, card)]
 
     def get_state_for_player(self, sid):
-        if sid not in self.players: return None
-        pos = self.players[sid]['position']
+        player_data = self.players.get(sid)
+        pos = player_data['position'] if player_data else None
         
         # Build hands view
         visible_hands = {}
@@ -329,20 +329,20 @@ class GameEngine:
             if i == pos:
                 visible_hands[i] = self.hands.get(i, [])
             elif self.partner_cards_revealed and i == (self.highest_bidder + 2) % 4:
-                visible_hands[i] = self.hands.get(i, [])  # Partner of bidder is revealed
+                visible_hands[i] = self.hands.get(i, [])
             else:
                 visible_hands[i] = [{'suit': '?', 'value': 0} for _ in range(len(self.hands.get(i, [])))]
 
-        playable_indices = self.get_playable_card_indices(pos)
-
-        partner_pos = (self.highest_bidder + 2) % 4
-        is_manager = (self.is_bot[self.highest_bidder] and self.highest_bidder is not None and not self.is_bot[partner_pos] and pos == partner_pos)
+        playable_indices = self.get_playable_card_indices(pos) if pos is not None else []
+        
+        partner_pos = (self.highest_bidder + 2) % 4 if self.highest_bidder is not None else -1
+        is_manager = (pos is not None and self.highest_bidder is not None and self.is_bot.get(self.highest_bidder) and not self.is_bot.get(partner_pos) and pos == partner_pos)
 
         return {
             'state': self.state,
             'my_position': pos,
             'is_manager': is_manager,
-            'players': {p: data['name'] for s, data in self.players.items() for p in [data['position']]},
+            'players': {data['position']: data['name'] for s, data in self.players.items()},
             'hands': visible_hands,
             'bids': self.bids,
             'current_bid': self.current_bid,
