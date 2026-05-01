@@ -125,6 +125,14 @@ async def bot_loop(app):
             elif game.state == 'PLAYING': bot_pos = game.current_turn
             
             if bot_pos is not None and game.is_bot.get(bot_pos):
+                # Check if human manager exists (Bot bidder has human partner)
+                partner_pos = (game.highest_bidder + 2) % 4 if game.highest_bidder is not None else -1
+                is_managed = (bot_pos == game.highest_bidder and partner_pos != -1 and not game.is_bot.get(partner_pos))
+                
+                # REIS: Kozu bot kendisi seçsin dediğin için sadece 'PLAYING' (oyun) aşamasında durduruyoruz.
+                if is_managed and game.state == 'PLAYING':
+                    continue 
+
                 action, value = game.get_bot_move(bot_pos)
                 if action == 'bid':
                     game.handle_bid(bot_pos, value)

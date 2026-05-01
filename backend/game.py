@@ -322,22 +322,24 @@ class GameEngine:
     def get_state_for_player(self, sid):
         player_data = self.players.get(sid)
         pos = player_data['position'] if player_data else None
-        
+
+        partner_pos = (self.highest_bidder + 2) % 4 if self.highest_bidder is not None else -1
+        is_manager = (pos is not None and self.highest_bidder is not None and self.is_bot.get(self.highest_bidder) and not self.is_bot.get(partner_pos) and pos == partner_pos)
+
         # Build hands view
         visible_hands = {}
         for i in range(4):
             if i == pos:
                 visible_hands[i] = self.hands.get(i, [])
-            elif self.partner_cards_revealed and i == (self.highest_bidder + 2) % 4:
+            elif self.partner_cards_revealed and i == partner_pos:
+                visible_hands[i] = self.hands.get(i, [])
+            elif is_manager and i == self.highest_bidder:
                 visible_hands[i] = self.hands.get(i, [])
             else:
                 visible_hands[i] = [{'suit': '?', 'value': 0} for _ in range(len(self.hands.get(i, [])))]
 
         playable_indices = self.get_playable_card_indices(pos) if pos is not None else []
         
-        partner_pos = (self.highest_bidder + 2) % 4 if self.highest_bidder is not None else -1
-        is_manager = (pos is not None and self.highest_bidder is not None and self.is_bot.get(self.highest_bidder) and not self.is_bot.get(partner_pos) and pos == partner_pos)
-
         return {
             'state': self.state,
             'my_position': pos,
