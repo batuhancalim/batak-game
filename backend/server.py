@@ -53,8 +53,10 @@ async def websocket_handler(request):
                 
                 elif action == 'add_bot':
                     bot_pos = data.get('position')
+                    logger.info(f"Bot talebi geldi: Koltuk {bot_pos}")
                     name = f"Bot {bot_pos + 1}"
                     success, message = game.add_player(f"bot_{bot_pos}", name, bot_pos)
+                    logger.info(f"Bot ekleme sonucu: {success}, {message}")
                     if success:
                         game.is_bot[bot_pos] = True
                     await broadcast_state()
