@@ -110,8 +110,15 @@ async def websocket_handler(request):
 
 async def bot_loop(app):
     while True:
-        await asyncio.sleep(1.5)
+        await asyncio.sleep(1.0)
         try:
+            # Auto-clear trick if 4 cards are on the table
+            if len(game.trick_cards) == 4:
+                await asyncio.sleep(1.5)
+                game.clear_trick()
+                await broadcast_state()
+                continue
+
             bot_pos = None
             if game.state == 'BIDDING': bot_pos = game.bidding_turn
             elif game.state == 'WAITING_TRUMP': bot_pos = game.highest_bidder
@@ -127,9 +134,6 @@ async def bot_loop(app):
                     await broadcast_state()
                 elif action == 'play_card':
                     game.play_card(bot_pos, value, bot_pos)
-                    if len(game.trick_cards) == 4:
-                        await asyncio.sleep(1.0)
-                        game.clear_trick()
                     await broadcast_state()
         except Exception as e:
             logger.error(f"Bot loop error: {e}")
