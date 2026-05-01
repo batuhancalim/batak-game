@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Açmalı Eşli Batak v1.2 - Premium Design</title>
+    <title>Açmalı Eşli Batak v1.5 - Modern Elite Edition</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Playfair+Display:ital,wght@1,700&display=swap" rel="stylesheet">
 </head>
@@ -14,7 +14,7 @@
             <h1>AÇMALI EŞLİ BATAK</h1>
             <p>Hızlıca masaya otur ve oyunu yönet</p>
             <input type="text" id="player-name" placeholder="Adınızı girin" autocomplete="off" />
-            <button onclick="joinGame()" class="btn-primary" style="width: 100%;">Masaya Gir</button>
+            <button onclick="joinGame()" class="btn-primary-modern" style="width: 100%;">Masaya Gir</button>
             <div id="login-error" class="error-msg" style="color: #ff7675; margin-top: 10px;"></div>
         </div>
     </div>
@@ -28,7 +28,7 @@
                 <div class="score-row"><span id="score-them-label">Onlar:</span> <span id="score-them">0</span></div>
                 <div id="tricks-info" class="tricks-info"></div>
                 <div class="trump-indicator" id="trump-indicator"></div>
-                <button class="btn-reset" onclick="resetScores()">↺ Sıfırla</button>
+                <button class="btn-modern" onclick="resetScores()">↺ Skorları Sıfırla</button>
             </div>
 
             <!-- Masa ve Oyuncular -->
@@ -41,7 +41,7 @@
                         <span data-type="banana" title="Muz">🍌</span>
                         <span data-type="cheers" title="Şerefe">🥂</span>
                     </div>
-                    <button class="btn-add-bot" onclick="addBotAt(2)">+ Bot Ekle</button>
+                    <button class="btn-modern" onclick="addBotAt(2)">+ Bot Ekle</button>
                 </div>
                 <div class="hand" id="hand-top"></div>
             </div>
@@ -55,7 +55,7 @@
                         <span data-type="banana" title="Muz">🍌</span>
                         <span data-type="cheers" title="Şerefe">🥂</span>
                     </div>
-                    <button class="btn-add-bot" onclick="addBotAt(1)">+ Bot Ekle</button>
+                    <button class="btn-modern" onclick="addBotAt(1)">+ Bot Ekle</button>
                 </div>
                 <div class="hand vertical-hand" id="hand-left"></div>
             </div>
@@ -69,7 +69,7 @@
                         <span data-type="banana" title="Muz">🍌</span>
                         <span data-type="cheers" title="Şerefe">🥂</span>
                     </div>
-                    <button class="btn-add-bot" onclick="addBotAt(3)">+ Bot Ekle</button>
+                    <button class="btn-modern" onclick="addBotAt(3)">+ Bot Ekle</button>
                 </div>
                 <div class="hand vertical-hand" id="hand-right"></div>
             </div>
@@ -83,7 +83,7 @@
                         <span data-type="banana" title="Muz">🍌</span>
                         <span data-type="cheers" title="Şerefe">🥂</span>
                     </div>
-                    <button class="btn-add-bot" onclick="addBotAt(0)" style="display: none;">+ Bot Ekle</button>
+                    <button class="btn-modern" onclick="addBotAt(0)" style="display: none;">+ Bot Ekle</button>
                 </div>
                 <div class="hand" id="hand-bottom"></div>
             </div>
@@ -96,13 +96,15 @@
                 <div class="played-card pos-bottom" id="played-bottom"></div>
                 
                 <div class="center-controls">
-                    <button id="btn-start" class="btn-primary" style="display: none;" onclick="startGame()">OYUNU BAŞLAT</button>
-                    <button id="btn-next-trick" class="btn-primary" style="display: none;" onclick="clearTrick()">Sonraki El</button>
-                    <button id="btn-next-round" class="btn-primary" style="display: none;" onclick="nextRound()">Sonraki Tur</button>
+                    <button id="btn-start" class="btn-primary-modern" style="display: none;" onclick="startGame()">OYUNU BAŞLAT</button>
+                    <button id="btn-next-trick" class="btn-primary-modern" style="display: none;" onclick="clearTrick()">Sonraki El</button>
+                    <button id="btn-next-round" class="btn-primary-modern" style="display: none;" onclick="nextRound()">Sonraki Tur</button>
                 </div>
             </div>
 
-            <div id="status-message" class="status-msg"></div>
+            <div id="status-panel" class="status-msg-panel">
+                <span id="status-message" class="status-msg-text">Bağlanıyor...</span>
+            </div>
         </div>
 
         <!-- İhale Modalı -->
@@ -111,7 +113,7 @@
                 <h2>İhale</h2>
                 <div id="bid-status" style="margin-bottom: 20px;">Sıra sizde, ihaleyi belirleyin.</div>
                 <div class="bid-buttons">
-                    <button class="btn-secondary" onclick="placeBid(0)">Pas</button>
+                    <button class="btn-secondary-modern" onclick="placeBid(0)">Pas</button>
                     <div id="bid-numbers" style="display: inline-block;"></div>
                 </div>
             </div>
