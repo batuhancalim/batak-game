@@ -69,14 +69,14 @@ function renderAll() {
     }
     document.getElementById('status-message').innerText = statusText;
 
-    // Table view
+    // View
     let rel = { 'bottom': myPos, 'left': (myPos+1)%4, 'top': (myPos+2)%4, 'right': (myPos+3)%4 };
     for (const [ui, gp] of Object.entries(rel)) {
         let name = gameState.players[gp] || "Boş";
         let area = document.getElementById('player-' + ui);
         if (area) {
-            let label = (gp === myPos) ? "Sen" : name;
-            if (gameState.highest_bidder === gp) label += ` (${gameState.current_bid} Aldı)`;
+            let label = (gp === myPos) ? playerName : name;
+            if (gameState.highest_bidder === gp) label += ` ihalede: ${gameState.current_bid}`;
             area.querySelector('.player-name').innerText = label;
             
             let botBtn = area.querySelector('.btn-add-bot');
@@ -84,7 +84,7 @@ function renderAll() {
 
             let giftMenu = area.querySelector('.gift-menu');
             if (giftMenu) {
-                giftMenu.style.display = (name !== "Boş") ? 'flex' : 'none';
+                giftMenu.style.display = (name !== "Boş" && name !== "Boş") ? 'flex' : 'none';
                 giftMenu.querySelectorAll('span').forEach(s => s.onclick = () => sendGift(gp, s.getAttribute('data-type')));
             }
         }
@@ -93,20 +93,13 @@ function renderAll() {
     }
 
     // Scoreboard
-    let p0 = gameState.players[0] || "P1", p2 = gameState.players[2] || "P3", p1 = gameState.players[1] || "P2", p3 = gameState.players[3] || "P4";
-    document.getElementById('score-us-label').innerText = `${p0} & ${p2}:`;
-    document.getElementById('score-them-label').innerText = `${p1} & ${p3}:`;
     document.getElementById('score-us').innerText = gameState.total_scores[0] || 0;
     document.getElementById('score-them').innerText = gameState.total_scores[1] || 0;
 
-    let tw0 = (gameState.tricks_won[0] || 0) + (gameState.tricks_won[2] || 0);
-    let tw1 = (gameState.tricks_won[1] || 0) + (gameState.tricks_won[3] || 0);
-    document.getElementById('tricks-info').innerText = (gameState.state === 'PLAYING' || gameState.state === 'ROUND_END') ? `Tur: Biz ${tw0} - Onlar ${tw1} (İhale: ${gameState.current_bid})` : "";
-
     let trumpEl = document.getElementById('trump-indicator');
     if (gameState.trump_suit) {
-        let color = (gameState.trump_suit==='H'||gameState.trump_suit==='D')?'red':'white';
-        trumpEl.innerHTML = `Koz: <span style="color:${color};font-size:2rem">${SUIT_SYMBOLS[gameState.trump_suit]}</span>`;
+        let color = (gameState.trump_suit==='H'||gameState.trump_suit==='D')?'#ff7675':'#fff';
+        trumpEl.innerHTML = `Koz: <span style="color:${color}">${SUIT_SYMBOLS[gameState.trump_suit]}</span>`;
     } else trumpEl.innerHTML = "";
 
     // Modals
@@ -133,7 +126,7 @@ function renderHand(ui, gp) {
     let myPos = gameState.my_position;
     let partnerPos = (gameState.highest_bidder + 2) % 4;
     let bidderIsMe = (myPos === gameState.highest_bidder);
-    let myPartnerIsBot = gameState.is_manager; // If bidder is bot and me is human partner
+    let myPartnerIsBot = gameState.is_manager;
     let canIPlayForPartner = (bidderIsMe && gp === partnerPos);
     let canIPlayForBotBidder = (myPartnerIsBot && gp === gameState.highest_bidder);
 
@@ -143,17 +136,10 @@ function renderHand(ui, gp) {
         else {
             let color = (card.suit === 'H' || card.suit === 'D') ? 'red' : 'black';
             let isPlayable = (gp === myPos || canIPlayForPartner || canIPlayForBotBidder) && playable.has(i);
-            
-            // State: only glow/fade during PLAYING state
-            let cardClass = `card ${color}`;
-            if (gameState.state === 'PLAYING') {
-                if (isPlayable) cardClass += " playable";
-                else if (gp === myPos || canIPlayForPartner || canIPlayForBotBidder) cardClass += " unplayable";
-            }
-
+            let stateClass = (gameState.state === 'PLAYING') ? (isPlayable ? "playable" : "unplayable") : "";
+            div.className = `card ${color} ${stateClass}`;
             let val = {11:'J', 12:'Q', 13:'K', 14:'A'}[card.value] || card.value;
             let sym = SUIT_SYMBOLS[card.suit];
-            div.className = cardClass;
             div.innerHTML = `<div class="card-top-left">${val}<br>${sym}</div><div class="center-suit">${sym}</div>`;
             if (isPlayable) div.onclick = () => playCard(i, gp);
         }
@@ -170,6 +156,19 @@ function renderPlayedCard(ui, gp) {
         let val = {11:'J', 12:'Q', 13:'K', 14:'A'}[card.value] || card.value;
         let sym = SUIT_SYMBOLS[card.suit];
         container.innerHTML = `<div class="card ${color}"><div class="card-top-left">${val}<br>${sym}</div><div class="center-suit">${sym}</div></div>`;
+    }
+}
+
+function showGiftAnimation(to, sender, type) {
+    const map = { 'tea': '☕', 'oralet': '🍵', 'banana': '🍌', 'cheers': '🥂' };
+    let uiPos = ['bottom', 'left', 'top', 'right'][(to - gameState.my_position + 4) % 4];
+    let area = document.getElementById('player-' + uiPos);
+    if (area) {
+        let el = document.createElement('div');
+        el.className = 'gift-animation-premium';
+        el.innerText = map[type];
+        area.appendChild(el);
+        setTimeout(() => el.remove(), 2500);
     }
 }
 
